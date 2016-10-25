@@ -50,3 +50,20 @@
 ### OpenStreetMap生态圈
 
 <img src="images/osm1.1.png"/><img src="images/osm1.2.png"/>
+
+## 搭建地图服务器
+
+### Windows下搭建OSM服务器的详细步骤
+
+目前网络上的例子，大多是在Linux下搭建OSM服务器。实际项目中由于客户现场环境的限制，可能必须使用Windows Server，故本文详细记录Windows下的搭建步骤，供各位参考。
+
+* **系统架构**
+
+<img src="images/osm-arch.png"/>
+上图中红色部分为本文主要使用的组件，我们把这些组件全部安装到一个目录%OSM_STACK%下
+
+* **下载地图**
+
+区域地图，可从这里下载：[http://download.geofabrik.de/](http://download.geofabrik.de/)<br/>
+全球地图，可从这里下载：[http://ftp.heanet.ie/mirrors/openstreetmap.org/planet/2015/planet-150105.osm.bz2](http://ftp.heanet.ie/mirrors/openstreetmap.org/planet/2015/planet-150105.osm.bz2)
+

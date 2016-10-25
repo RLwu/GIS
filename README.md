@@ -60,7 +60,7 @@
 
 * **系统架构**
 
-<img src="images/osm-arch.png"/>
+<img src="images/osm_arch.png"/>
 上图中红色部分为本文主要使用的组件，我们把这些组件全部安装到一个目录%OSM_STACK%下
 
 * **下载地图**

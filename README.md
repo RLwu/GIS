@@ -253,7 +253,9 @@ cd /cygdrive/c/Users/Suigintou/Documents/MapBox/project/openstreetmap-carto-mast
 #193.63.75.107 planet.openstreetmap.org
 ```
 下载、处理完成后，打开TileMill，可以看到OpenStreetMap Carto这个项目，点击打开，然后点击右上角按钮，导出mapnik样式文件，如下图：
+
 <img src="images/tilemail.png"/>
+
 导出成功后，打开XML文件，搜寻里面的类似：“C:\Users\用户名\Documents\MapBox\project\osm-carto\……”绝对路径，将其删除，并把路径中剩余部分的反斜杠改为正斜杠，修改完毕后，路径类似：“data/simplified-land-polygons-complete-3857/simplified_land_polygons.shp”，把文件移动到%OSM_STACK%\osm-carto目录下。
 把整个openstreetmap-carto-master目录（就是TileMill编辑的工程）覆盖到%OSM_STACK%\osm-carto。
 

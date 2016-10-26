@@ -679,3 +679,5 @@ Leaflet是一个近来迅速流行的JavaScript库，比起OpenLayers它更小�
 </body>
 </html>
 ```
+
+原文：https://blog.gmem.cc/setup-openstreetmap-server

@@ -326,7 +326,7 @@ http://host:port/{layer name}/{zoom}/{column}/{row}.{extension}
 
 * **集成TileStache与mapnik**
 
-<img src="tsmap1.jpg"/><img src="tsmap2.jpg"/><img src="tsmap3.jpg"/><img src="tsmap4.jpg"/>
+<img src="images/tsmap1.jpg"/><img src="images/tsmap2.jpg"/><img src="images/tsmap3.jpg"/><img src="images/tsmap4.jpg"/>
 
 tilestache.cfg可以配置为这样：
 ```

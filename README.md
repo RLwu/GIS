@@ -323,3 +323,359 @@ http://host:port/{layer name}/{zoom}/{column}/{row}.{extension}
 </tr>
 </tbody>
 </table>
+
+* **集成TileStache与mapnik**
+
+<img src="tsmap1.jpg"/><img src="tsmap2.jpg"/><img src="tsmap3.jpg"/><img src="tsmap4.jpg"/>
+
+tilestache.cfg可以配置为这样：
+```
+{
+  "cache":
+  {
+    "name": "Disk",
+    "path": "D:/Programs/OsmStack/tilestache/cache"
+  },
+  "layers": 
+  {
+    "osm":
+    {
+        "provider": {
+            "name": "mapnik", 
+            "mapfile": "file://D:/Programs/OsmStack/osm-carto/mapnik-style.xml",
+            "fonts" : "D:/Programs/OsmStack/mapnik/fonts"
+        },
+        "metatile" : {
+            "rows" : "4",
+            "columns" : "4",
+            "buffer" : "64"
+        },
+        "preview" : {
+            "lat" : "39.9396",
+            "lon" : "116.3488",
+            "zoom" : "12",
+            "ext" : "png"
+        }
+    }
+  }
+}
+```
+注意其中的mapfile对应的路径，必须从Windows路径格式改为URI形式，例如：D:\Programs\Osmstack 改为 file://D:/Programs/Osmstack<br/>
+tilestache.cfg改好后，启动TileStache Web服务，浏览器打开http://127.0.0.1:5539/osm/preview.html进行测试。
+
+* **绿化批处理脚本示意**
+
+在Windows下，可以参考下面三个脚本，分别完成地图服务器的初始化、启动、停止：
+
+init.bat
+```
+@echo off
+chcp 437
+pushd "%~dp0"
+ 
+set "OSMSTACK_HOME=%CD%"
+set "OSM_DIR=%OSMSTACK_HOME%\osm"
+set "MAPNIK_HOME=%OSMSTACK_HOME%\mapnik"
+set "PYTHON_HOME=%OSMSTACK_HOME%\python"
+set "PSQL_HOME=%OSMSTACK_HOME%\psql"
+set "OSM2PQSQL_HOME=%OSMSTACK_HOME%\osm2pgsql"
+set "PATH=%OSM2PQSQL_HOME%;%MAPNIK_HOME%\lib;%MAPNIK_HOME%\bin;%PSQL_HOME%\bin;%PYTHON_HOME%;%PYTHON_HOME%\Scripts;%PATH%"
+set "PYTHONPATH=%MAPNIK_HOME%\python\2.7\site-packages;%PYTHONPATH%"
+ 
+SET "PGDATA=%PSQL_HOME%\data"
+SET "PGDATABASE=postgres"
+SET "PGUSER=postgres"
+SET "PGPORT=5432"
+SET "PGLOCALEDIR=%PSQL_HOME%\share\locale"
+rem GIS databse name and owner
+SET "GISDATABASE=gis"
+SET "GISUSER=gisuser"
+ 
+echo ****** Prepare to initializing PostgreSQL  ****** 
+initdb -U %PGUSER% --auth=trust --auth-host=trust --auth-local=trust --pwprompt -E UTF8
+copy %PSQL_HOME%\postgresql.conf %PSQL_HOME%\data\postgresql.conf /y
+ 
+echo ****** Prepare to start PostgreSQL  ****** 
+pg_ctl -w -l %PSQL_HOME%\pgsql.log start
+ 
+echo ****** Creating user %GISUSER%  ****** 
+createuser -U %PGUSER% -P %GISUSER%
+echo ****** Creating database %GISDATABASE%  ****** 
+createdb -U %PGUSER% -E UTF8 -O %GISUSER% %GISDATABASE%
+echo ****** Installing procedural language into %GISDATABASE%  ****** 
+createlang -U %PGUSER% plpgsql %GISDATABASE%
+echo ****** Activating PostGIS for %GISDATABASE%  ****** 
+ 
+psql -U %PGUSER% -d %GISDATABASE% -f "%PSQL_HOME%\share\contrib\postgis-2.1\postgis.sql"
+psql -U %PGUSER% -d %GISDATABASE% -f "%PSQL_HOME%\share\contrib\postgis-2.1\spatial_ref_sys.sql"
+rem After the activation, the following command should list the tables geometry_columns and spatial_ref_sys:
+psql --username=%GISUSER% --dbname=%GISDATABASE% --command="\d"
+ 
+echo ****** Installing extension hstore for %GISDATABASE%  ****** 
+echo create extension hstore; | psql -U %PGUSER% -d %GISDATABASE%
+ 
+ 
+echo ****** Import OSM data into %GISDATABASE%  ****** 
+echo Please input osm package name ( without suffix '.osm.bz2' ), Press Enter to skip : 
+set /p OSM_NAME=
+if defined OSM_NAME (
+    osm2pgsql -c -d gis -U %PGUSER% -H localhost -P %PGPORT%  --hstore -S %OSM2PQSQL_HOME%\openstreetmap-carto.style  -C 600 %OSM_DIR%\%OSM_NAME%.osm.bz2
+)
+ 
+echo ****** Processing TilesTache config file ****** 
+set __OSM_PATH=%~p0
+set __OSM_PATH=%__OSM_PATH:\=/%
+python "tilestache/generate-cfg.py" %__OSM_PATH%
+ 
+echo ****** Prepare to stop PostgreSQL  ****** 
+pg_ctl -w stop
+ 
+:end
+```
+
+startup.bat
+```
+@echo off
+chcp 437
+pushd "%~dp0"
+ 
+set "OSMSTACK_HOME=%CD%"
+set "OSM_DIR=%OSMSTACK_HOME%\osm"
+set "MAPNIK_HOME=%OSMSTACK_HOME%\mapnik"
+set "PYTHON_HOME=%OSMSTACK_HOME%\python"
+set "PSQL_HOME=%OSMSTACK_HOME%\psql"
+set "OSM2PQSQL_HOME=%OSMSTACK_HOME%\osm2pgsql"
+set "PATH=%OSM2PQSQL_HOME%;%MAPNIK_HOME%\lib;%MAPNIK_HOME%\bin;%PSQL_HOME%\bin;%PYTHON_HOME%;%PYTHON_HOME%\Scripts;%PATH%"
+set "PYTHONPATH=%MAPNIK_HOME%\python\2.7\site-packages;%PYTHONPATH%"
+ 
+ 
+SET "PGDATA=%PSQL_HOME%\data"
+SET "PGDATABASE=postgres"
+SET "PGUSER=postgres"
+SET "PGPORT=5432"
+SET "PGLOCALEDIR=%PSQL_HOME%\share\locale"
+ 
+echo ****** Prepare to start PostgreSQL  ****** 
+pg_ctl  -w  -l%PSQL_HOME%\pgsql.log start
+ 
+echo ****** Prepare to start TileStache  ****** 
+SET "TILE_STACHE_SCR=%PYTHON_HOME%\Scripts\tilestache-server.py"
+ 
+python "%TILE_STACHE_SCR:\=/%"  -i 0.0.0.0 -p 5539 -c tilestache/osm.cfg
+```
+
+shutdown.bat
+```
+@echo off
+chcp 437
+pushd "%~dp0"
+ 
+set "OSMSTACK_HOME=%CD%"
+set "MAPNIK_HOME=%OSMSTACK_HOME%\mapnik"
+set "PYTHON_HOME=%OSMSTACK_HOME%\python"
+set "PSQL_HOME=%OSMSTACK_HOME%\psql"
+set "PATH=%MAPNIK_HOME%\lib;%MAPNIK_HOME%\bin;%PSQL_HOME%\bin;%PYTHON_HOME%;%PATH%"
+ 
+SET "PGDATA=%PSQL_HOME%\data"
+SET "PGDATABASE=postgres"
+SET "PGUSER=postgres"
+SET "PGPORT=5432"
+SET "PGLOCALEDIR=%PSQL_HOME%\share\locale"
+ 
+echo ****** Prepare to stop PostgreSQL  ****** 
+pg_ctl -w stop
+```
+
+
+> 以下是着重要学习的！！！
+
+## 通过前端API使用OSM瓦片
+
+### 使用OpenLayers
+
+OpenLayers很久以来一直是在网页中嵌入OSM地图的标准选择，它是一个成熟、综合的JS库，学习曲线较为平缓，提供大量的特性，包括完整的投影支持（full projection support）、矢量绘图、预览地图（overview maps）等等。
+
+下面是一个简单的例子：
+```
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!doctype html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="openlayers3/ol.css" type="text/css">
+    <style>
+        html, body{ margin:0; height:100%; }
+        #mapdiv { width:100%; height:100%; }
+    </style>
+    <script src="openlayers3/ol.js" type="text/javascript"></script>
+    <title>OpenLayers3 Example</title>
+</head>
+<body>
+ 
+<div id="mapdiv" ></div>
+<script type="text/javascript">
+    //定义一个矢量图像
+    var image = new ol.style.Circle({
+        radius: 5,
+        fill: new ol.style.Stroke({color: '#F00'}),
+        stroke: new ol.style.Stroke({color: '#000', width: 1})
+    });
+    //定义样式
+    var styles = {
+        'Point': [new ol.style.Style({
+            image: image
+        })],
+        'Polygon': [new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: '#00F',
+                lineDash: [2],
+                width: 1
+            }),
+            fill: new ol.style.Fill({
+                color: 'rgba(0, 0, 255, 0.1)'
+            })
+        })]
+    };
+    //定义一个矢量图层
+    var vectorSource = new ol.source.GeoJSON(
+    ({
+        object: {
+            'type': 'FeatureCollection',
+            //坐标参考系（Coordinate Reference Systems）
+            'crs': {
+                'type': 'name',
+                'properties': {
+                    'name': 'EPSG:3857'
+                }
+            },
+            'features': [
+                //画一个点
+                {
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'Point',
+                        //坐标系转换：
+                        //EPSG:4326，直接把经纬度作为X、Y方向的坐标值，南纬、西经为负数
+                        //EPSG:3857，球面墨卡托投影，以米为单位，以前叫EPSG:900931
+                        'coordinates': ol.proj.transform([ 116.34430, 39.94225], 'EPSG:4326', 'EPSG:3857')
+                    }
+                },
+                //画一个五边形
+                {
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'Polygon',
+                        'coordinates': [
+                            [
+                                ol.proj.transform([ 116.1007694, 40.2551712], 'EPSG:4326', 'EPSG:3857'),
+                                ol.proj.transform([ 117.2687534, 40.3578032], 'EPSG:4326', 'EPSG:3857'),
+                                ol.proj.transform([ 117.5886384, 39.2306078], 'EPSG:4326', 'EPSG:3857'),
+                                ol.proj.transform([ 116.9843903, 38.42073], 'EPSG:4326', 'EPSG:3857'),
+                                ol.proj.transform([ 115.5792222, 39.1692678], 'EPSG:4326', 'EPSG:3857')
+                            ]
+                        ]
+                    }
+                },
+            ]
+        }
+    }));
+ 
+    var styleFunction = function (feature, resolution) {
+        return styles[feature.getGeometry().getType()];
+    };
+    //定义一个矢量图层
+    var vectorLayer = new ol.layer.Vector({
+        source: vectorSource,
+        style: styleFunction//寻找样式定义的回调函数
+    });
+    //定义一个地图
+    var map = new ol.Map({
+        target: 'mapdiv', //渲染目标
+        //图层列表，包含一个光栅图层，一个矢量图层
+        layers: [
+            new ol.layer.Tile({
+                source: new ol.source.XYZ({
+                    url: 'http://192.168.0.89:5539/osm/{z}/{x}/{y}.png'
+                }),
+            }),
+            vectorLayer
+        ],
+        //视角：缩放级别7，以北二环为中心
+        view: new ol.View({
+            center: ol.proj.transform([116.34430, 39.94225], 'EPSG:4326', 'EPSG:3857'),
+            zoom: 7
+        })
+    });
+</script>
+</body>
+</html>
+```
+
+### 使用Leaflet
+
+Leaflet是一个近来迅速流行的JavaScript库，比起OpenLayers它更小小巧、简单，对于简单寻常的需求，Leaflet是个好的选择。
+
+下面是一个简单的例子：
+```
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Leaflet Example</title>
+    <link rel="stylesheet" type="text/css" href="leaflet/leaflet.css" />
+    <script type="text/javascript" src="leaflet/leaflet-src.js"></script>
+    <script type="text/javascript">
+        var map;
+ 
+        function init() {
+            // 在一个DIV中创建地图对象
+            map = new L.Map('mapdiv');
+    
+            // 创建瓦片图层
+            var osmUrl='http://192.168.0.89:5539/osm/{z}/{x}/{y}.png';
+            var osmAttrib='Kingsmart Tech';
+            var osm = new L.TileLayer(osmUrl, {minZoom: 3, maxZoom: 18, attribution: osmAttrib});       
+    
+            // 地图中心设置为西北二环附近
+            map.setView(new L.LatLng( 39.94225, 116.34430 ),12);
+            map.addLayer(osm);//添加图层
+            
+            //在地图上添加标记
+            var plot = {
+                "name":"金名科技",
+                "lon":"116.34430",
+                "lat":"39.94225",
+                "details":"金名科技是座落于海淀区高粱桥斜街59号院的高新技术企业"
+            };
+            var plotll = new L.LatLng( plot.lat, plot.lon, true );//标记的坐标
+            var mark = new L.Marker(plotll);
+            mark.data = plot;
+            map.addLayer(mark);//添加标记到地图
+            mark.bindPopup("<h4>" + plot.name + "</h4>" + plot.details);//绑定提示框
+            
+            //在地图上添加一个多边形
+            var latlngs = [
+                new L.LatLng( 39.931064087073835, 116.3481330871582),    
+                new L.LatLng( 39.9600172003783, 116.32684707641602),   
+                new L.LatLng( 39.99264056247673, 116.37628555297852 ),   
+                new L.LatLng( 39.97922477476731, 116.46417617797852 ),   
+                new L.LatLng( 39.90657598772841, 116.45936965942383),   
+                new L.LatLng( 39.87338459498892, 116.36838912963867),   
+                new L.LatLng( 39.931064087073835, 116.3481330871582)
+            ];
+            var polyline = L.polyline(latlngs, {color: 'red'}).addTo(map);
+        }
+    </script>
+ 
+    <style>
+    html, body{ margin:0; height:100%; }
+    #mapdiv { width:100%; height:100%; }
+    div.olControlAttribution { bottom:3px; }
+    </style>
+ 
+</head>
+ 
+<body onload="init();">
+    <div id="mapdiv"></div>
+</body>
+</html>
+```

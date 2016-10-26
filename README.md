@@ -78,7 +78,7 @@
 最好下载PostgreSQL 9.0以上或者 8.3版，8.4存在性能问题。<br/>
 9.4的下载地址：[http://get.enterprisedb.com/postgresql/postgresql-9.4.0-1-windows-binaries.zip](http://get.enterprisedb.com/postgresql/postgresql-9.4.0-1-windows-binaries.zip)<br/>
 解压到%OSM_STACK%\psql<br/>
-下载PostGIS：[http://download.osgeo.org/postgis/windows/pg94/postgis-bundle-pg94x32-2.1.5-2.zip](http://download.osgeo.org/postgis/windows/pg94/postgis-bundle-pg94x32-2.1.5-2.zip)<br/>
+下载PostGIS：[http://download.osgeo.org/postgis/windows/pg94/](http://download.osgeo.org/postgis/windows/pg94/)<br/>
 解压覆盖到%OSM_STACK%\psql<br/>
 注意：上述的PostgreSQL是绿色版的，对MSVC12有C运行时库、C++标准库有依赖，如果你的机器缺少msvcp120.dll、msvcr120.dll这两个DLL，可以下载：Visual C++ Redistributable Packages for Visual Studio 2013并安装，亦可直接拷贝这两个文件到%OSM_STACK%\psql\bin下<br/>
 

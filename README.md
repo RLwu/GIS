@@ -8,7 +8,7 @@
 
 * **前端API**：用于浏览器的JavaScript API，或者用于移动客户端的同功API。例如OpenLayers、Leaflet。
 
-<img src="images/schema6_2014p.pdf"/>
+<img src="images/schema6_2014p.png"/>
 
 ### 坐标参考系统（Coordinate Reference Systems）
 
